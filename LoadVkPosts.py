@@ -130,6 +130,7 @@ def load_posts(count=20):
         posts.extend(parse_posts(load_html(offset)))
         offset += 10
         print(posts.__len__(), '..')
+    print('\n')
     return posts
 
 
