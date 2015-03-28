@@ -2,6 +2,7 @@ from collections import namedtuple
 from enum import Enum
 import statistics
 import re
+import math
 
 import requests
 import urllib3
@@ -10,7 +11,7 @@ import urllib3
 __author__ = 'aindrias'
 http = urllib3.PoolManager()
 
-Post = namedtuple('Post', 'language likes shares')
+Post = namedtuple('Post', 'language like share')
 
 
 class Language(Enum):
@@ -57,11 +58,11 @@ def parse_single_post(snippet):
     match_like = re.search('post_like_count fl_l" id="like_count-\d*_\d*">(\d*)</', snippet)
     match_share = re.search('post_share_count fl_l" id="share_count-\d*_\d*">(\d*)</', snippet)
     if match_text and match_like and match_share:
-        # print('\n\n')
-        # print(match_text.group(1))
-        # print(match_like.group(1))
-        # print(match_share.group(1))
-        return Post(language(match_text.group(1)), int(match_like.group(1)), int(match_share.group(1)))
+        text = match_text.group(1)
+        l = language(text)
+        # if l == Language.OTHER:
+        #     print(text)
+        return Post(l, int(match_like.group(1)), int(match_share.group(1)))
     else:
         # print("ERROR")
         return None
@@ -84,11 +85,11 @@ def print_list(numbers_list):
         pass
     else:
         print('MEAN '
-              + (statistics.mean(numbers_list)).__str__()
+              + (statistics.mean(numbers_list)).__int__().__str__()
               + ' MEDIAN '
-              + statistics.median(numbers_list).__str__())
+              + statistics.median(numbers_list).__int__().__str__())
         if numbers_list.__len__() > 1:
-            print(' VARIANCE ' + statistics.variance(numbers_list).__str__())
+            print(' VARIANCE ' + math.sqrt(statistics.variance(numbers_list)).__int__().__str__())
 
     print('\n')
 
@@ -99,17 +100,35 @@ def analyze(posts):
     other_posts = []
     for post in posts:
         if post.language == Language.UKRAINIAN:
-            ukrainian_posts.append(post.likes)
+            ukrainian_posts.append(post)
         elif post.language == Language.RUSSIAN:
-            russian_posts.append(post.likes)
+            russian_posts.append(post)
         elif post.language == Language.OTHER:
-            other_posts.append(post.likes)
+            other_posts.append(post)
+
+    print("LIKES", "\n")
+    print("UKRAINIAN " + (ukrainian_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
+    print_list(likes(ukrainian_posts))
+    print("RUSSIAN " + (russian_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
+    print_list(likes(russian_posts))
+    print("OTHER " + (other_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
+    print_list(likes(other_posts))
+
+    print("SHARES", "\n")
     print("UKRAINIAN")
-    print_list(ukrainian_posts)
+    print_list(shares(ukrainian_posts))
     print("RUSSIAN")
-    print_list(russian_posts)
+    print_list(shares(russian_posts))
     print("OTHER")
-    print_list(other_posts)
+    print_list(shares(other_posts))
+
+
+def likes(posts):
+    return [post.like for post in posts]
+
+
+def shares(posts):
+    return [post.share for post in posts]
 
 
 def load_posts(count=20):
@@ -123,4 +142,4 @@ def load_posts(count=20):
 
 
 if __name__ == '__main__':
-    analyze(load_posts(1000))
+    analyze(load_posts(5000))
