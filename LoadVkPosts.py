@@ -4,10 +4,15 @@ import statistics
 import re
 import math
 import requests
+import langid
 
 UA_REVO = -38854900
 LUHANSK = -2424065
 OZIV = -72444174
+TROIA = -3933663
+KYIV = -32195333
+DYNAMO_KYIV = -4645142
+POLTAWA = -1919231
 
 __author__ = 'aindrias'
 
@@ -17,7 +22,8 @@ Post = namedtuple('Post', 'language like share')
 class Language(Enum):
     UKRAINIAN = 1
     RUSSIAN = 2
-    UNDEFINED = 3
+    BOTH = 3
+    UNDEFINED = 4
 
 
 def load_html(group_id, offset):
@@ -26,8 +32,23 @@ def load_html(group_id, offset):
     return requests.post(url, data).text
 
 
+def language_langid(text):
+    classify = langid.classify(text)
+    lang_code = classify[0]
+    probability = classify[1]
+    if probability < 0.5:
+        return Language.UNDEFINED
+    elif lang_code == 'uk':
+        return Language.UKRAINIAN
+    elif lang_code == 'ru':
+        return Language.RUSSIAN
+    else:
+        return Language.UNDEFINED
+
+
 def language(text):
     text = text.replace('Показати повністю', '')
+
     ukrainian_letters = set('іІїЇєЄґҐ')
     looks_like_ukrainian = any((c in ukrainian_letters) for c in text)
 
@@ -35,13 +56,13 @@ def language(text):
     looks_like_russian = any((c in russian_letters) for c in text)
 
     if looks_like_ukrainian and looks_like_russian:
-        return Language.UNDEFINED
+        return Language.BOTH
     elif looks_like_ukrainian:
         return Language.UKRAINIAN
     elif looks_like_russian:
         return Language.RUSSIAN
     else:
-        return Language.UNDEFINED
+        return language_langid(text)
 
 
 def parse_single_post(snippet):
@@ -49,7 +70,7 @@ def parse_single_post(snippet):
     like = re.search('post_like_count fl_l" id="like_count-\d*_\d*">(\d*)</', snippet)
     share = re.search('post_share_count fl_l" id="share_count-\d*_\d*">(\d*)</', snippet)
     if message and like and share:
-        return Post(language(message.group(1)), int('0'+like.group(1)), int('0'+share.group(1)))
+        return Post(language(message.group(1)), int('0' + like.group(1)), int('0' + share.group(1)))
     else:
         # Either of message, likes count or shares count can't be parsed.
         # Usually it's message. Because posts happen be image-only or video-only.
@@ -85,6 +106,7 @@ def analyze(posts):
     ukrainian_posts = []
     russian_posts = []
     undefined_posts = []
+    both_posts = []
     for post in posts:
         if post.language == Language.UKRAINIAN:
             ukrainian_posts.append(post)
@@ -92,22 +114,28 @@ def analyze(posts):
             russian_posts.append(post)
         elif post.language == Language.UNDEFINED:
             undefined_posts.append(post)
+        elif post.language == Language.BOTH:
+            both_posts.append(post)
 
     print("LIKES", "\n")
     print("UKRAINIAN " + (ukrainian_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
     print_list(likes(ukrainian_posts))
     print("RUSSIAN " + (russian_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
     print_list(likes(russian_posts))
+    print("BOTH " + (both_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
+    print_list(likes(both_posts))
     print("UNDEFINED " + (undefined_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
     print_list(likes(undefined_posts))
 
-    print("SHARES", "\n")
-    print("UKRAINIAN")
-    print_list(shares(ukrainian_posts))
-    print("RUSSIAN")
-    print_list(shares(russian_posts))
-    print("UNDEFINED")
-    print_list(shares(undefined_posts))
+    # print("SHARES", "\n")
+    # print("UKRAINIAN")
+    # print_list(shares(ukrainian_posts))
+    # print("RUSSIAN")
+    # print_list(shares(russian_posts))
+    # print("BOTH")
+    # print_list(shares(both_posts))
+    # print("UNDEFINED")
+    # print_list(shares(undefined_posts))
 
 
 def likes(posts):
@@ -130,4 +158,4 @@ def load_posts(group_id, count=50):
 
 
 if __name__ == '__main__':
-    analyze(load_posts(OZIV, 1000))
+    analyze(load_posts(POLTAWA, 5000))
