@@ -9,8 +9,8 @@ import langid
 UA_REVO = -38854900
 LUHANSK = -2424065
 OZIV = -72444174
-TROIA = -3933663
-KYIV = -32195333
+TROIESHCHYNA = -3933663
+TYPICAL_KYIV = -32195333
 DYNAMO_KYIV = -4645142
 POLTAWA = -1919231
 
@@ -88,7 +88,7 @@ def parse_posts(html):
 
 
 def print_list(numbers_list):
-    # print('[%s]' % ', '.join(map(str, numbers_list)))
+    print('[%s]' % ', '.join(map(str, numbers_list)))
     if numbers_list.__len__() == 0:
         pass
     else:
@@ -97,9 +97,21 @@ def print_list(numbers_list):
               + ' MEDIAN '
               + statistics.median(numbers_list).__int__().__str__(), end="")
         if numbers_list.__len__() > 1:
-            print(' VARIANCE ' + math.sqrt(statistics.variance(numbers_list)).__int__().__str__())
+            print(' SD ' + statistics.stdev(numbers_list).__int__().__str__())
 
+    print('\n[%s]' % ', '.join(map(str, transform(numbers_list))))
     print('\n')
+
+
+def transform(param):
+    param.sort()
+    result = []
+    while len(param) > 0:
+        pop = param.pop(0)
+        while result.__len__() <= pop:
+            result.append(0)
+        result[-1] += 1
+    return result
 
 
 def analyze(posts):
@@ -119,9 +131,9 @@ def analyze(posts):
 
     print("LIKES", "\n")
     print("UKRAINIAN " + (ukrainian_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
-    print_list(likes(ukrainian_posts))
+    print_list((likes(ukrainian_posts)))
     print("RUSSIAN " + (russian_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
-    print_list(likes(russian_posts))
+    print_list((likes(russian_posts)))
     print("BOTH " + (both_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
     print_list(likes(both_posts))
     print("UNDEFINED " + (undefined_posts.__len__() * 100 / posts.__len__()).__int__().__str__() + '%')
@@ -158,4 +170,4 @@ def load_posts(group_id, count=50):
 
 
 if __name__ == '__main__':
-    analyze(load_posts(POLTAWA, 5000))
+    analyze(load_posts(TYPICAL_KYIV, 5000))
